@@ -1,0 +1,172 @@
+<style>
+  body{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font-family: Arial, sans-serif;
+  }
+
+  .controls{
+    display: flex;
+    gap: 15px;
+    margin: 10px 0;
+    align-items: center;
+  }
+
+  canvas{
+    border: 2px solid #333;
+  }
+</style>
+
+<h2>🐍 Snake Game</h2>
+
+<div class="controls">
+  <label>
+    Difficulty:
+    <select id="level">
+      <option value="150">Easy</option>
+      <option value="100">Medium</option>
+      <option value="60">Hard</option>
+    </select>
+  </label>
+
+  <button onclick="restartGame()">Restart 🔄</button>
+</div>
+
+<canvas id="canvas" width="600" height="400"></canvas>
+
+
+<script>
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+
+let game;
+
+function restartGame(){
+  game = new Game();
+}
+
+function Game(){
+  this.scale = 20;
+  this.speed = document.getElementById("level").value;
+  this.nx = canvas.width / this.scale;
+  this.ny = canvas.height / this.scale;
+
+  this.snake = new Snake();
+  this.food = new Food();
+
+  this.score = 0;
+  this.time = 60;
+  this.gameOver = false;
+
+  this.step = () => {
+    if(this.gameOver){
+      this.drawGameOver();
+      return;
+    }
+    this.snake.step(this);
+    this.draw();
+    setTimeout(this.step, this.speed);
+  };
+
+  this.draw = () => {
+    // Lawn 🌱
+    ctx.fillStyle = "#6DBE45";
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+
+    this.snake.draw(this);
+    this.food.draw(this);
+
+    ctx.fillStyle = "black";
+    ctx.font = "18px Arial";
+    ctx.fillText("Score: "+this.score,10,20);
+    ctx.fillText("Time: "+this.time,520,20);
+  };
+
+  this.drawGameOver = () => {
+    ctx.fillStyle="rgba(0,0,0,0.6)";
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.fillStyle="white";
+    ctx.font="36px Arial";
+    ctx.fillText("GAME OVER",180,190);
+  };
+
+  document.onkeydown = e => this.snake.keydown(e.key);
+
+  setInterval(()=>{
+    if(!this.gameOver){
+      if(this.time>0) this.time--;
+      else this.gameOver=true;
+    }
+  },1000);
+
+  this.step();
+}
+
+// 🐍 Snake
+function Snake(){
+  this.x=10; this.y=10;
+  this.vx=1; this.vy=0;
+  this.len=3;
+  this.body=[];
+
+  this.step = game => {
+    this.x+=this.vx;
+    this.y+=this.vy;
+
+    if(this.x<0) this.x=game.nx-1;
+    if(this.y<0) this.y=game.ny-1;
+    if(this.x>=game.nx) this.x=0;
+    if(this.y>=game.ny) this.y=0;
+
+    for(let p of this.body){
+      if(p.x===this.x && p.y===this.y){
+        game.gameOver=true;
+        return;
+      }
+    }
+
+    if(this.x===game.food.x && this.y===game.food.y){
+      this.len++;
+      game.score+=10;
+      game.food.reset(game);
+    }
+
+    this.body.push({x:this.x,y:this.y});
+    while(this.body.length>this.len) this.body.shift();
+  };
+
+  this.draw = game => {
+    this.body.forEach((p,i)=>{
+      ctx.beginPath();
+      ctx.fillStyle=i==this.body.length-1?"darkgreen":"green";
+      ctx.arc(p.x*20+10,p.y*20+10,8,0,Math.PI*2);
+      ctx.fill();
+    });
+  };
+
+  this.keydown = k => {
+    if(k=="ArrowUp"){this.vx=0;this.vy=-1;}
+    if(k=="ArrowDown"){this.vx=0;this.vy=1;}
+    if(k=="ArrowLeft"){this.vx=-1;this.vy=0;}
+    if(k=="ArrowRight"){this.vx=1;this.vy=0;}
+  };
+}
+
+// 🥚 Egg
+function Food(){
+  this.reset = game => {
+    this.x=Math.floor(Math.random()*game.nx);
+    this.y=Math.floor(Math.random()*game.ny);
+  };
+  this.draw = game => {
+    ctx.beginPath();
+    ctx.fillStyle="white";
+    ctx.ellipse(this.x*20+10,this.y*20+10,7,10,0,0,Math.PI*2);
+    ctx.fill();
+  };
+  this.reset({nx:30,ny:20});
+}
+
+game = new Game();
+</script>
